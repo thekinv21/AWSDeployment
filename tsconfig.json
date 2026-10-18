@@ -23,7 +23,8 @@
     "noFallthroughCasesInSwitch": false,
     "types": ["node"],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/prisma_client/*": ["./prisma/generated/prisma/*"]
     }
   }
 }
