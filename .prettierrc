@@ -5,6 +5,8 @@
   "importOrder": [
     "^@nestjs/(.*)$",
     "<THIRD_PARTY_MODULES>",
+    "^@/config/(.*)$",
+    "^@/shared/(.*)$",
     "^@/(.*)$",
     "^[./]"
   ],
