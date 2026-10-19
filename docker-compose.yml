@@ -1,0 +1,101 @@
+#* Docker Compose 3 servisten oluşur:
+
+#? 1. db: PostgreSQL veri tabanı
+#? 2. migrate: Prisma migration (Tek sefer çalışır)
+#? 3. backend: NestJS uygulaması
+
+#* Başlama sırası: db (hazır) -> migrate (tamamlandı) -> backend
+#* Değişkenler .env dosyasından okunur, yoksa ":-" sonrası varsayılan kullanılır
+
+services:
+  #? 1) db
+
+  db:
+    container_name: 'postgresql_db'
+    image: postgres:18-alpine
+
+    restart: unless-stopped
+
+    #* İlk açılışta kullanıcı, şifre ve veritabanı bu değerlerle oluşturulur
+
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-app}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-app}
+      - POSTGRES_DB=${POSTGRES_DB:-app}
+      - POSTGRES_HOST=${POSTGRES_HOST:-app}
+
+    #* Veriler pgdata volume'unda kalıcı tutulur (Postgres 18+ veri klasörü)
+
+    volumes:
+      - pgdata:/var/lib/postgresql
+
+    #TODO: Lokal DB araçları için açık; production'da kaldırılmalı
+    #* Host'ta 5433 (5432 lokal Postgres'te dolu); container içi 5432
+
+    ports:
+      - '5433:5432'
+
+    #* DB bağlantı kabul edene kadar "healthy" olmaz; migrate bunu bekler
+    #* $$: değişkeni compose değil, container içindeki shell okur
+
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  #? 2) migrate
+
+  migrate:
+    container_name: 'prisma_orm7_migration'
+    #* Prisma CLI (dev bağımlılığı) sadece "build" aşamasında var
+
+    build:
+      context: .
+      target: build
+
+    #* Konteyner içinde "localhost" konteynerin kendisidir; Mac'teki lokal Postgres'e host.docker.internal ile ulaşılır
+
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@host.docker.internal:5432/${POSTGRES_DB:-app}?schema=public
+
+    #* migrate deploy: sadece bekleyen migration'ları uygular, yeni üretmez
+
+    command: ['npx', 'prisma', 'migrate', 'deploy']
+
+    #* İş bitince kapanır, yeniden başlatılmaz
+
+    restart: 'no'
+
+  #? 3) backend
+
+  backend:
+    container_name: 'backend'
+
+    #* Dockerfile'daki final aşama (runner)
+
+    build:
+      context: .
+      target: runner
+
+    restart: unless-stopped
+
+    environment:
+      - NODE_ENV=development
+      - PORT=4200
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3000}
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-app}@host.docker.internal:5432/${POSTGRES_DB:-app}?schema=public
+
+    #* "HOST:CONTAINER" -> sağ taraf PORT ile aynı olmalı
+
+    ports:
+      - '4200:4200'
+
+    #* Migration başarıyla bitmeden backend başlamaz
+
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:
