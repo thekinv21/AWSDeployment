@@ -51,4 +51,4 @@ async function bootstrap() {
     Logger.debug(`Swagger UI running on host: http://localhost:${port}/docs`);
   }
 }
-bootstrap();
+void bootstrap();
