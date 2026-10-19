@@ -1,98 +1,99 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Deployment with Docker and Github Actions
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+NestJS 11, Prisma 7 ve PostgreSQL ile geliştirilmiş REST API.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Gereksinimler
 
-## Description
+- Docker Desktop
+- PostgreSQL (lokal, `5432` portunda)
+- Node.js 24 ve Bun (yalnızca Docker olmadan çalıştırmak için)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
-
-## Project setup
+## Kurulum
 
 ```bash
-$ npm install
+cp .env.example .env
 ```
 
-## Compile and run the project
+`.env` içindeki `POSTGRES_USER`, `POSTGRES_PASSWORD` ve `POSTGRES_DB` değerlerini lokal PostgreSQL bilgilerinle doldur.
+
+## Docker ile çalıştırma
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+docker compose up -d --build
+docker compose logs -f backend
 ```
 
-## Run tests
+| Adres                      | Açıklama   |
+| -------------------------- | ---------- |
+| http://localhost:4200/api  | API        |
+| http://localhost:4200/docs | Swagger UI |
+
+Loglar terminale akacak şekilde çalıştırmak için:
 
 ```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+docker compose up --build             # Ctrl+C tüm servisleri durdurur
 ```
 
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Cache temizleyip sıfırdan build almak için:
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+docker compose down
+docker builder prune -af
+docker compose build --no-cache
+docker compose up -d && docker compose logs -f migrate backend
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Durdurmak için:
 
-## Resources
+```bash
+docker compose down
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+### Servisler
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+| Servis    | Görev                                                                       |
+| --------- | --------------------------------------------------------------------------- |
+| `migrate` | Bekleyen migration'ları uygular ve kapanır. `Exited (0)` beklenen durumdur. |
+| `backend` | NestJS uygulaması. `migrate` başarıyla tamamlandıktan sonra başlar.         |
 
-## Support
+Konteynerler lokal PostgreSQL'e `host.docker.internal:5432` üzerinden bağlanır.
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Sık kullanılan komutlar
 
-## Stay in touch
+```bash
+docker compose ps -a                  # servis durumları
+docker compose logs migrate           # migration çıktısı
+docker compose restart backend        # backend'i yeniden başlat
+docker compose run --rm migrate       # migration'ları tekrar çalıştır
+```
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Migration
 
-## License
+Migration'lar lokalde oluşturulur, Docker başlatılırken otomatik uygulanır:
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+```bash
+npm run db:migrate -- --name <migration_adi>
+docker compose up -d --build
+```
+
+## Docker olmadan çalıştırma
+
+```bash
+npm install
+npm run db:generate
+npm run db:migrate
+npm run start:dev
+```
+
+## Sorun giderme
+
+| Belirti                              | Çözüm                                                                             |
+| ------------------------------------ | --------------------------------------------------------------------------------- |
+| `P1001: Can't reach database server` | Lokal PostgreSQL'in çalıştığını ve `.env` bilgilerinin doğru olduğunu kontrol et. |
+| `backend` başlamıyor                 | `docker compose logs migrate` ile migration hatasını incele.                      |
+| Kod değişikliği yansımıyor           | `--build` parametresiyle yeniden başlat.                                          |
+| `http://localhost:4200/` 404 dönüyor | Beklenen davranış; tüm endpoint'ler `/api` altındadır.                            |
+
+## Production
+
+`host.docker.internal` yalnızca lokal geliştirme içindir. Production ortamında `DATABASE_URL` hedef veritabanını (ör. RDS) göstermeli ve `NODE_ENV=production` olmalıdır.

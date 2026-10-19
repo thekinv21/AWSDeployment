@@ -7,6 +7,10 @@
 #* Başlama sırası: db (hazır) -> migrate (tamamlandı) -> backend
 #* Değişkenler .env dosyasından okunur, yoksa ":-" sonrası varsayılan kullanılır
 
+#* Proje adı: image ve volume adları buradan gelir (klasör adından bağımsız)
+
+name: docker-deployment
+
 services:
   #? 1) db
 
